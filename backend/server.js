@@ -6,6 +6,7 @@ import connectDB from "./config/db.js";
 // 🧩 Import routes
 import userRoutes from "./routes/userRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
+import feedbackRoutes from "./routes/feedbackRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -28,6 +29,8 @@ app.use(express.json());
 
 app.use("/api/users", userRoutes);   // handles /api/users/register and /api/users/login
 app.use("/api/events", eventRoutes); // handles /api/events/
+app.use("/api/feedback", feedbackRoutes); // handles /api/feedback/
+
 
 app.get("/", (req, res) => res.send("✅ Backend is connected!"));
 
