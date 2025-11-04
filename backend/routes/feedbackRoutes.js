@@ -1,12 +1,13 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
-import { addFeedback } from "../controllers/feedbackController.js";
+import { addFeedback, getFeedbackByEvent } from "../controllers/feedbackController.js"; // ✅ include both
 
 const router = express.Router();
 
+// Add feedback for an event
 router.post("/:id", protect, addFeedback);
 
-// GET all feedback for a specific event
-router.get("/:id", getFeedbackByEvent);
+// Get all feedback for a specific event
+router.get("/:id", protect, getFeedbackByEvent);
 
 export default router;
