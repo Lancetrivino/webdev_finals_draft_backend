@@ -4,6 +4,9 @@ import { addFeedback } from "../controllers/feedbackController.js";
 
 const router = express.Router();
 
-router.post("/", protect, addFeedback);
+router.post("/:id", protect, addFeedback);
+
+// GET all feedback for a specific event
+router.get("/:id", getFeedbackByEvent);
 
 export default router;
