@@ -1,5 +1,6 @@
 import Event from '../models/Event.js';
 
+// 🆕 NEW FUNCTION: Get a single event by ID
 export const getEventById = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id)
