@@ -18,7 +18,6 @@ app.use(
     origin: [
       "http://localhost:5173",
       "https://webdev-finals-draft.vercel.app",
-      "https://webdev-finals-draft-git-features-afc59c-lancetrivinos-projects.vercel.app",
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
