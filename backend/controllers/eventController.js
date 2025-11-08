@@ -56,23 +56,53 @@ export const getEventById = async (req, res) => {
   }
 };
 
-// 🟩 CREATE A NEW EVENT
+
 export const createEvent = async (req, res) => {
   try {
     const createdBy = req.user._id;
 
-    const newEvent = await Event.create({
-      ...req.body,
+    // Destructure fields from request body
+    const {
+      title,
+      description,
+      date,
+      venue,
+      time,
+      duration,
+      imageData,
+      reminders,
+    } = req.body;
+
+    // Validate required fields
+    if (!title || !description || !date || !venue) {
+      return res.status(400).json({ message: "Title, description, date, and venue are required." });
+    }
+
+    // Build event object
+    const eventFields = {
+      title: title.trim(),
+      description: description.trim(),
+      date,
+      venue: venue.trim(),
       createdBy,
-    });
+      status: "Pending", // New events default to Pending
+    };
+
+    // Optional fields
+    if (time) eventFields.time = time;
+    if (duration) eventFields.duration = duration;
+    if (imageData) eventFields.image = imageData; // save base64 string under 'image'
+    if (Array.isArray(reminders) && reminders.length > 0) eventFields.reminders = reminders;
+
+    const newEvent = await Event.create(eventFields);
 
     res.status(201).json({
-      message: "Event submitted for review.",
+      message: "Event submitted for review. Pending admin approval.",
       event: newEvent,
     });
   } catch (error) {
     console.error("❌ Error creating event:", error);
-    res.status(400).json({ message: "Error creating event", details: error.message });
+    res.status(500).json({ message: "Server error creating event", details: error.message });
   }
 };
 
