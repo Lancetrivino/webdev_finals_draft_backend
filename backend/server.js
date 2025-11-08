@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
 
-// 🧩 Import routes
 import userRoutes from "./routes/userRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
@@ -24,13 +23,13 @@ app.use(
   })
 );
 
-app.use(express.json());
 
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-app.use("/api/users", userRoutes);   // handles /api/users/register and /api/users/login
-app.use("/api/events", eventRoutes); // handles /api/events/
-app.use("/api/feedback", feedbackRoutes); // handles /api/feedback/
-
+app.use("/api/users", userRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 app.get("/", (req, res) => res.send("✅ Backend is connected!"));
 
