@@ -5,7 +5,7 @@ export const getEvents = async (req, res) => {
   try {
     let events;
 
-    // Admins see all, others see only approved events
+    // Admin sees all events; others see only approved
     if (req.user.role === "Admin") {
       events = await Event.find().populate("createdBy", "name email role");
     } else {
@@ -19,49 +19,39 @@ export const getEvents = async (req, res) => {
   }
 };
 
-// 🟩 GET A SINGLE EVENT BY ID
+// 🟩 GET SINGLE EVENT BY ID
 export const getEventById = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id)
       .populate("createdBy", "name email role")
       .populate("participants", "name email");
 
-    if (!event) {
-      return res.status(404).json({ message: "Event not found." });
-    }
+    if (!event) return res.status(404).json({ message: "Event not found." });
 
-    // Access control — only admins or creators can see unapproved events
     const isCreator = event.createdBy?._id?.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "Admin";
 
+    // Access control: unapproved events can only be seen by admin or creator
     if (event.status !== "Approved" && !isAdmin && !isCreator) {
       return res.status(403).json({ message: "Access denied. Event is not approved." });
     }
 
-    // Add participant count
-    const eventDetails = {
+    res.status(200).json({
       ...event.toObject(),
       totalParticipants: event.participants?.length || 0,
-    };
-
-    res.status(200).json(eventDetails);
+    });
   } catch (error) {
     console.error("❌ Error getting event by ID:", error);
-
-    if (error.name === "CastError") {
-      return res.status(404).json({ message: "Invalid Event ID format." });
-    }
-
+    if (error.name === "CastError") return res.status(404).json({ message: "Invalid Event ID." });
     res.status(500).json({ message: "Server error fetching event details." });
   }
 };
 
-
+// 🟩 CREATE A NEW EVENT
 export const createEvent = async (req, res) => {
   try {
     const createdBy = req.user._id;
 
-    // Destructure fields from request body
     const {
       title,
       description,
@@ -85,13 +75,13 @@ export const createEvent = async (req, res) => {
       date,
       venue: venue.trim(),
       createdBy,
-      status: "Pending", // New events default to Pending
+      status: "Pending",
     };
 
     // Optional fields
     if (time) eventFields.time = time;
     if (duration) eventFields.duration = duration;
-    if (imageData) eventFields.image = imageData; // save base64 string under 'image'
+    if (imageData) eventFields.image = imageData;
     if (Array.isArray(reminders) && reminders.length > 0) eventFields.reminders = reminders;
 
     const newEvent = await Event.create(eventFields);
@@ -110,25 +100,19 @@ export const createEvent = async (req, res) => {
 export const approveEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
+    if (!event) return res.status(404).json({ message: "Event not found" });
 
     if (event.status === "Approved") {
-      return res.status(200).json({ message: "Event is already approved.", event });
+      return res.status(200).json({ message: "Event already approved.", event });
     }
 
     event.status = "Approved";
     await event.save();
 
-    res.status(200).json({
-      message: "Event successfully approved and is now visible to all users.",
-      event,
-    });
+    res.status(200).json({ message: "Event approved successfully.", event });
   } catch (error) {
     console.error("❌ Error approving event:", error);
-    res.status(500).json({ message: "Server error during event approval" });
+    res.status(500).json({ message: "Server error during event approval." });
   }
 };
 
@@ -136,23 +120,16 @@ export const approveEvent = async (req, res) => {
 export const updateEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
+    if (!event) return res.status(404).json({ message: "Event not found" });
 
     const isCreator = event.createdBy.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "Admin";
 
     if (!isCreator && !isAdmin) {
-      return res.status(403).json({
-        message: "Not authorized to modify this event. Only the creator or an Admin can make changes.",
-      });
+      return res.status(403).json({ message: "Not authorized to modify this event." });
     }
 
-    const updateData = req.body;
-
-    // Only admins can modify `status` or `createdBy`
+    const updateData = { ...req.body };
     if (!isAdmin) {
       delete updateData.status;
       delete updateData.createdBy;
@@ -163,10 +140,7 @@ export const updateEvent = async (req, res) => {
       runValidators: true,
     }).populate("createdBy", "name email role");
 
-    res.status(200).json({
-      message: "Event updated successfully.",
-      event: updatedEvent,
-    });
+    res.status(200).json({ message: "Event updated successfully.", event: updatedEvent });
   } catch (error) {
     console.error("❌ Error updating event:", error);
     res.status(400).json({ message: "Error updating event", details: error.message });
@@ -177,23 +151,17 @@ export const updateEvent = async (req, res) => {
 export const deleteEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
+    if (!event) return res.status(404).json({ message: "Event not found" });
 
     const isCreator = event.createdBy.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "Admin";
 
     if (!isCreator && !isAdmin) {
-      return res.status(403).json({
-        message: "Not authorized to delete this event. Only the creator or an Admin can delete.",
-      });
+      return res.status(403).json({ message: "Not authorized to delete this event." });
     }
 
     await Event.deleteOne({ _id: req.params.id });
-
-    res.status(204).json({ message: "Event removed successfully." });
+    res.status(200).json({ message: "Event deleted successfully." });
   } catch (error) {
     console.error("❌ Error deleting event:", error);
     res.status(500).json({ message: "Server error during event deletion" });
@@ -204,31 +172,24 @@ export const deleteEvent = async (req, res) => {
 export const joinEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
+    if (!event) return res.status(404).json({ message: "Event not found" });
 
     if (event.status !== "Approved") {
-      return res.status(400).json({ message: "Event is not approved yet" });
+      return res.status(400).json({ message: "Event is not approved yet." });
     }
 
     const userId = req.user._id;
-
     if (event.participants.includes(userId)) {
-      return res.status(400).json({ message: "User already registered for this event" });
+      return res.status(400).json({ message: "User already registered for this event." });
     }
 
     event.participants.push(userId);
     await event.save();
 
-    res.status(200).json({
-      message: "Successfully registered for the event.",
-      event,
-    });
+    res.status(200).json({ message: "Registered for event successfully.", event });
   } catch (error) {
     console.error("❌ Error joining event:", error);
-    res.status(500).json({ message: "Server error during event registration" });
+    res.status(500).json({ message: "Server error during event registration." });
   }
 };
 
@@ -236,15 +197,11 @@ export const joinEvent = async (req, res) => {
 export const leaveEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
+    if (!event) return res.status(404).json({ message: "Event not found" });
 
     const userId = req.user._id;
-
     if (!event.participants.includes(userId)) {
-      return res.status(400).json({ message: "User is not registered for this event" });
+      return res.status(400).json({ message: "User is not registered for this event." });
     }
 
     event.participants = event.participants.filter(
@@ -252,12 +209,9 @@ export const leaveEvent = async (req, res) => {
     );
     await event.save();
 
-    res.status(200).json({
-      message: "Successfully unregistered from the event.",
-      event,
-    });
+    res.status(200).json({ message: "Successfully unregistered from event.", event });
   } catch (error) {
     console.error("❌ Error leaving event:", error);
-    res.status(500).json({ message: "Server error during un-registration" });
+    res.status(500).json({ message: "Server error during un-registration." });
   }
 };
