@@ -2,7 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
-
+import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
@@ -27,7 +27,7 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-app.use("/api/users", userRoutes);
+app.use("/api/users", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/feedback", feedbackRoutes);
 
