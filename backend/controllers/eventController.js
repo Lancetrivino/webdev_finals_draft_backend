@@ -52,6 +52,7 @@ export const getEventById = async (req, res) => {
 };
 
 // 🟩 CREATE A NEW EVENT
+// 🟩 CREATE A NEW EVENT (Revised)
 export const createEvent = async (req, res) => {
   try {
     const createdBy = req.user._id;
@@ -64,11 +65,46 @@ export const createEvent = async (req, res) => {
       time,
       duration,
       reminders,
+      typeOfEvent,
+      capacity,
     } = req.body;
+
+    // Helper to detect placeholder values
+    const isPlaceholder = (value) => typeof value === "string" && value.trim().toLowerCase() === "aaa";
 
     // Validate required fields
     if (!title || !description || !date || !venue) {
       return res.status(400).json({ message: "Title, description, date, and venue are required." });
+    }
+
+    // Reject placeholder values
+    if (isPlaceholder(title) || isPlaceholder(description) || isPlaceholder(venue)) {
+      return res.status(400).json({ message: "Please provide meaningful values for title, description, and venue." });
+    }
+
+    // Validate date format (YYYY-MM-DD)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ message: "Date must be in YYYY-MM-DD format." });
+    }
+
+    // Validate time format (HH:mm)
+    if (time && !/^([01]\d|2[0-3]):([0-5]\d)$/.test(time)) {
+      return res.status(400).json({ message: "Time must be in HH:mm format." });
+    }
+
+    // Validate capacity
+    if (capacity && (!Number.isInteger(Number(capacity)) || Number(capacity) < 1)) {
+      return res.status(400).json({ message: "Capacity must be a positive integer." });
+    }
+
+    // Validate typeOfEvent
+    if (typeOfEvent && isPlaceholder(typeOfEvent)) {
+      return res.status(400).json({ message: "Type of event must be meaningful." });
+    }
+
+    // Validate reminders
+    if (reminders && !Array.isArray(reminders)) {
+      return res.status(400).json({ message: "Reminders must be an array." });
     }
 
     // Build event object
@@ -84,11 +120,13 @@ export const createEvent = async (req, res) => {
     // Optional fields
     if (time) eventFields.time = time;
     if (duration) eventFields.duration = duration;
+    if (typeOfEvent) eventFields.typeOfEvent = typeOfEvent.trim();
+    if (capacity) eventFields.capacity = Number(capacity);
     if (Array.isArray(reminders) && reminders.length > 0) eventFields.reminders = reminders;
 
     // File upload: use req.file.path (from Multer)
     if (req.file) {
-      eventFields.image = req.file.path; // store the uploaded file path
+      eventFields.image = req.file.path;
     }
 
     const newEvent = await Event.create(eventFields);
@@ -99,10 +137,14 @@ export const createEvent = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error creating event:", error);
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: "Validation failed", details: error.errors });
+    }
+
     res.status(500).json({ message: "Server error creating event", details: error.message });
   }
 };
-
 // 🟩 APPROVE EVENT (Admin only)
 export const approveEvent = async (req, res) => {
   try {
