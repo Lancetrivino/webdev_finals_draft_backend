@@ -1,63 +1,11 @@
 import Event from "../models/Event.js";
 
-// 🟩 GET ALL EVENTS
-export const getEvents = async (req, res) => {
-  try {
-    let events;
-
-    if (req.user.role === "Admin") {
-      // Admin sees all events
-      events = await Event.find().populate("createdBy", "name email role");
-    } else {
-      // Normal users see only their own events
-      events = await Event.find({ createdBy: req.user._id }).populate(
-        "createdBy",
-        "name email"
-      );
-    }
-
-    res.status(200).json(events);
-  } catch (error) {
-    console.error("❌ Error getting events:", error);
-    res.status(500).json({ message: "Server error fetching events" });
-  }
-};
-
-// 🟩 GET SINGLE EVENT BY ID
-export const getEventById = async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id)
-      .populate("createdBy", "name email role")
-      .populate("participants", "name email");
-
-    if (!event) return res.status(404).json({ message: "Event not found." });
-
-    const isCreator = event.createdBy?._id?.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === "Admin";
-
-    // Access control: unapproved events can only be seen by admin or creator
-    if (event.status !== "Approved" && !isAdmin && !isCreator) {
-      return res.status(403).json({ message: "Access denied. Event is not approved." });
-    }
-
-    res.status(200).json({
-      ...event.toObject(),
-      totalParticipants: event.participants?.length || 0,
-    });
-  } catch (error) {
-    console.error("❌ Error getting event by ID:", error);
-    if (error.name === "CastError") return res.status(404).json({ message: "Invalid Event ID." });
-    res.status(500).json({ message: "Server error fetching event details." });
-  }
-};
-
 // 🟩 CREATE A NEW EVENT
-// 🟩 CREATE A NEW EVENT (Revised)
 export const createEvent = async (req, res) => {
   try {
     const createdBy = req.user._id;
 
-    let {
+    const {
       title,
       description,
       date,
@@ -69,26 +17,39 @@ export const createEvent = async (req, res) => {
       capacity,
     } = req.body;
 
-    // Parse reminders if sent as string from FormData
-    if (typeof reminders === "string") {
-      try {
-        reminders = JSON.parse(reminders);
-      } catch {
-        reminders = [];
-      }
+    // Validate required fields
+    if (!title?.trim() || !description?.trim() || !date || !venue?.trim()) {
+      return res
+        .status(400)
+        .json({ message: "Title, description, date, and venue are required." });
     }
 
-    // Convert capacity to number
-    if (capacity) capacity = Number(capacity);
+    // Validate date format (YYYY-MM-DD)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ message: "Date must be in YYYY-MM-DD format." });
+    }
 
-    // Validate required fields
-    if (!title || !description || !date || !venue) {
-      return res.status(400).json({ message: "Title, description, date, and venue are required." });
+    // Validate time format (HH:mm)
+    if (time && !/^([01]\d|2[0-3]):([0-5]\d)$/.test(time)) {
+      return res.status(400).json({ message: "Time must be in HH:mm format." });
     }
 
     // Validate capacity
-    if (capacity && (!Number.isInteger(capacity) || capacity < 1)) {
+    const parsedCapacity = Number(capacity) || 50;
+    if (!Number.isInteger(parsedCapacity) || parsedCapacity < 1) {
       return res.status(400).json({ message: "Capacity must be a positive integer." });
+    }
+
+    // Parse reminders if sent as JSON string
+    let parsedReminders = [];
+    if (reminders) {
+      try {
+        parsedReminders = JSON.parse(reminders);
+        if (!Array.isArray(parsedReminders))
+          throw new Error("Reminders must be an array.");
+      } catch (err) {
+        return res.status(400).json({ message: "Invalid reminders format." });
+      }
     }
 
     // Build event object
@@ -99,15 +60,13 @@ export const createEvent = async (req, res) => {
       venue: venue.trim(),
       createdBy,
       status: "Pending",
+      capacity: parsedCapacity,
+      reminders: parsedReminders,
     };
 
     if (time) eventFields.time = time;
     if (duration) eventFields.duration = duration;
     if (typeOfEvent) eventFields.typeOfEvent = typeOfEvent.trim();
-    if (capacity) eventFields.capacity = capacity;
-    if (Array.isArray(reminders) && reminders.length > 0) eventFields.reminders = reminders;
-
-    // File upload
     if (req.file) eventFields.image = req.file.path;
 
     const newEvent = await Event.create(eventFields);
@@ -122,125 +81,5 @@ export const createEvent = async (req, res) => {
       return res.status(400).json({ message: "Validation failed", details: error.errors });
     }
     res.status(500).json({ message: "Server error creating event", details: error.message });
-  }
-};
-
-// 🟩 APPROVE EVENT (Admin only)
-export const approveEvent = async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ message: "Event not found" });
-
-    if (event.status === "Approved") {
-      return res.status(200).json({ message: "Event already approved.", event });
-    }
-
-    event.status = "Approved";
-    await event.save();
-
-    res.status(200).json({ message: "Event approved successfully.", event });
-  } catch (error) {
-    console.error("❌ Error approving event:", error);
-    res.status(500).json({ message: "Server error during event approval." });
-  }
-};
-
-// 🟩 UPDATE EVENT
-export const updateEvent = async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ message: "Event not found" });
-
-    const isCreator = event.createdBy.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === "Admin";
-
-    if (!isCreator && !isAdmin) {
-      return res.status(403).json({ message: "Not authorized to modify this event." });
-    }
-
-    const updateData = { ...req.body };
-    if (!isAdmin) {
-      delete updateData.status;
-      delete updateData.createdBy;
-    }
-
-    const updatedEvent = await Event.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-      runValidators: true,
-    }).populate("createdBy", "name email role");
-
-    res.status(200).json({ message: "Event updated successfully.", event: updatedEvent });
-  } catch (error) {
-    console.error("❌ Error updating event:", error);
-    res.status(400).json({ message: "Error updating event", details: error.message });
-  }
-};
-
-// 🟩 DELETE EVENT
-export const deleteEvent = async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ message: "Event not found" });
-
-    const isCreator = event.createdBy.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === "Admin";
-
-    if (!isCreator && !isAdmin) {
-      return res.status(403).json({ message: "Not authorized to delete this event." });
-    }
-
-    await Event.deleteOne({ _id: req.params.id });
-    res.status(200).json({ message: "Event deleted successfully." });
-  } catch (error) {
-    console.error("❌ Error deleting event:", error);
-    res.status(500).json({ message: "Server error during event deletion" });
-  }
-};
-
-// 🟩 JOIN EVENT
-export const joinEvent = async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ message: "Event not found" });
-
-    if (event.status !== "Approved") {
-      return res.status(400).json({ message: "Event is not approved yet." });
-    }
-
-    const userId = req.user._id;
-    if (event.participants.includes(userId)) {
-      return res.status(400).json({ message: "User already registered for this event." });
-    }
-
-    event.participants.push(userId);
-    await event.save();
-
-    res.status(200).json({ message: "Registered for event successfully.", event });
-  } catch (error) {
-    console.error("❌ Error joining event:", error);
-    res.status(500).json({ message: "Server error during event registration." });
-  }
-};
-
-// 🟩 LEAVE EVENT
-export const leaveEvent = async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ message: "Event not found" });
-
-    const userId = req.user._id;
-    if (!event.participants.includes(userId)) {
-      return res.status(400).json({ message: "User is not registered for this event." });
-    }
-
-    event.participants = event.participants.filter(
-      (participantId) => participantId.toString() !== userId.toString()
-    );
-    await event.save();
-
-    res.status(200).json({ message: "Successfully unregistered from event.", event });
-  } catch (error) {
-    console.error("❌ Error leaving event:", error);
-    res.status(500).json({ message: "Server error during un-registration." });
   }
 };

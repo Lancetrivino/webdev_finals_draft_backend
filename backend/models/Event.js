@@ -15,6 +15,10 @@ const eventSchema = new mongoose.Schema(
     date: {
       type: Date,
       required: [true, "Please add the date of the event"],
+      validate: {
+        validator: (v) => !isNaN(new Date(v).getTime()),
+        message: "Invalid date format",
+      },
     },
     time: {
       type: String, // optional
@@ -66,4 +70,3 @@ const eventSchema = new mongoose.Schema(
 
 const Event = mongoose.model("Event", eventSchema);
 export default Event;
-  
