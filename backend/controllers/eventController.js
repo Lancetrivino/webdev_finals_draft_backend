@@ -63,7 +63,6 @@ export const createEvent = async (req, res) => {
       venue,
       time,
       duration,
-      imageData,
       reminders,
     } = req.body;
 
@@ -85,8 +84,12 @@ export const createEvent = async (req, res) => {
     // Optional fields
     if (time) eventFields.time = time;
     if (duration) eventFields.duration = duration;
-    if (imageData) eventFields.image = imageData;
     if (Array.isArray(reminders) && reminders.length > 0) eventFields.reminders = reminders;
+
+    // File upload: use req.file.path (from Multer)
+    if (req.file) {
+      eventFields.image = req.file.path; // store the uploaded file path
+    }
 
     const newEvent = await Event.create(eventFields);
 
