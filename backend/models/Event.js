@@ -17,11 +17,11 @@ const eventSchema = new mongoose.Schema(
       required: [true, "Please add the date of the event"],
     },
     time: {
-      type: String, // ⬅️ optional
+      type: String, // optional
       trim: true,
     },
     duration: {
-      type: String, // ⬅️ optional (e.g., "2h 15m")
+      type: String, // optional (e.g., "2h 15m")
       trim: true,
     },
     venue: {
@@ -30,10 +30,10 @@ const eventSchema = new mongoose.Schema(
       trim: true,
     },
     image: {
-      type: String, // ⬅️ optional base64 image string
+      type: String, // optional base64 or URL
     },
     reminders: {
-      type: [String], // ⬅️ optional array of strings
+      type: [String], // optional array of strings
       default: [],
     },
     status: {
@@ -41,6 +41,11 @@ const eventSchema = new mongoose.Schema(
       enum: ["Pending", "Approved", "Rejected"],
       default: "Pending",
       required: true,
+    },
+    capacity: {
+      type: Number,
+      default: 50, // default max slots per event
+      min: [1, "Capacity must be at least 1"],
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -61,3 +66,4 @@ const eventSchema = new mongoose.Schema(
 
 const Event = mongoose.model("Event", eventSchema);
 export default Event;
+  

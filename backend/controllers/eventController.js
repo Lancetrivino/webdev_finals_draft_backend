@@ -5,11 +5,15 @@ export const getEvents = async (req, res) => {
   try {
     let events;
 
-    // Admin sees all events; others see only approved
     if (req.user.role === "Admin") {
+      // Admin sees all events
       events = await Event.find().populate("createdBy", "name email role");
     } else {
-      events = await Event.find({ status: "Approved" }).populate("createdBy", "name email");
+      // Normal users see only their own events
+      events = await Event.find({ createdBy: req.user._id }).populate(
+        "createdBy",
+        "name email"
+      );
     }
 
     res.status(200).json(events);
