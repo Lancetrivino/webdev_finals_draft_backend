@@ -21,7 +21,7 @@ const eventSchema = new mongoose.Schema(
       },
     },
     time: {
-      type: String, // optional
+      type: String, // optional (HH:mm format)
       trim: true,
     },
     duration: {
@@ -33,11 +33,15 @@ const eventSchema = new mongoose.Schema(
       required: [true, "Please add the venue for the event"],
       trim: true,
     },
+    typeOfEvent: {
+      type: String, // ✅ ADDED: Type of event (e.g., "Conference", "Workshop")
+      trim: true,
+    },
     image: {
-      type: String, // optional base64 or URL
+      type: String, // optional - file path or URL
     },
     reminders: {
-      type: [String], // optional array of strings
+      type: [String], // optional array of reminder strings
       default: [],
     },
     status: {
@@ -48,7 +52,7 @@ const eventSchema = new mongoose.Schema(
     },
     capacity: {
       type: Number,
-      default: 50, // default max slots per event
+      default: 50,
       min: [1, "Capacity must be at least 1"],
     },
     createdBy: {
