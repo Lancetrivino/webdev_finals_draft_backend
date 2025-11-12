@@ -48,14 +48,14 @@ export const getEventById = async (req, res) => {
   }
 };
 
-// 🟩 CREATE A NEW EVENT (Fixed with Debug Logging)
+// 🟩 CREATE A NEW EVENT (✅ Fixed for .fields())
 export const createEvent = async (req, res) => {
   try {
     // ✅ DEBUG: Log everything received
     console.log("📥 CREATE EVENT REQUEST:");
     console.log("  Headers:", req.headers);
     console.log("  Body:", req.body);
-    console.log("  File:", req.file);
+    console.log("  Files:", req.files); // ✅ Changed from req.file
     console.log("  User:", req.user?._id);
 
     const createdBy = req.user._id;
@@ -144,7 +144,8 @@ export const createEvent = async (req, res) => {
     if (time) eventFields.time = time;
     if (duration) eventFields.duration = duration;
     if (typeOfEvent && typeOfEvent.trim()) eventFields.typeOfEvent = typeOfEvent.trim();
-    if (req.file) eventFields.image = req.file.path;
+    // ✅ Fixed: Changed from req.file to req.files
+    if (req.files?.image?.[0]) eventFields.image = req.files.image[0].path;
 
     console.log("✅ Creating event with fields:", eventFields);
 
@@ -194,7 +195,7 @@ export const approveEvent = async (req, res) => {
   }
 };
 
-// 🟩 UPDATE EVENT
+// 🟩 UPDATE EVENT (✅ Fixed for .fields())
 export const updateEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
@@ -211,6 +212,11 @@ export const updateEvent = async (req, res) => {
     if (!isAdmin) {
       delete updateData.status;
       delete updateData.createdBy;
+    }
+
+    // ✅ Fixed: Handle image upload with .fields()
+    if (req.files?.image?.[0]) {
+      updateData.image = req.files.image[0].path;
     }
 
     const updatedEvent = await Event.findByIdAndUpdate(req.params.id, updateData, {

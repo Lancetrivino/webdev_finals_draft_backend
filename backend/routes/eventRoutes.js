@@ -39,16 +39,16 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
 });
 
-// ✅ Routes
+// ✅ Routes - FIXED: Use .fields() instead of .single()
 router.route("/")
   .get(protect, getEvents)
-  .post(protect, upload.single("image"), createEvent);
+  .post(protect, upload.fields([{ name: "image", maxCount: 1 }]), createEvent);
 
 router.put("/:id/approve", protect, admin, approveEvent);
 
 router.route("/:id")
   .get(protect, getEventById)
-  .put(protect, upload.single("image"), updateEvent) // ✅ Added multer here too
+  .put(protect, upload.fields([{ name: "image", maxCount: 1 }]), updateEvent)
   .delete(protect, deleteEvent);
 
 router.post("/:id/join", protect, joinEvent);
