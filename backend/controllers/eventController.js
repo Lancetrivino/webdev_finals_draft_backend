@@ -6,10 +6,8 @@ export const getEvents = async (req, res) => {
     let events;
 
     if (req.user.role === "Admin") {
-      // Admin sees all events
       events = await Event.find().populate("createdBy", "name email role");
     } else {
-      // Normal users see only their own events
       events = await Event.find({ createdBy: req.user._id }).populate(
         "createdBy",
         "name email"
@@ -35,7 +33,6 @@ export const getEventById = async (req, res) => {
     const isCreator = event.createdBy?._id?.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "Admin";
 
-    // Access control: unapproved events can only be seen by admin or creator
     if (event.status !== "Approved" && !isAdmin && !isCreator) {
       return res.status(403).json({ message: "Access denied. Event is not approved." });
     }
@@ -51,12 +48,19 @@ export const getEventById = async (req, res) => {
   }
 };
 
-// 🟩 CREATE A NEW EVENT
-// 🟩 CREATE A NEW EVENT (Revised)
+// 🟩 CREATE A NEW EVENT (Fixed with Debug Logging)
 export const createEvent = async (req, res) => {
   try {
+    // ✅ DEBUG: Log everything received
+    console.log("📥 CREATE EVENT REQUEST:");
+    console.log("  Headers:", req.headers);
+    console.log("  Body:", req.body);
+    console.log("  File:", req.file);
+    console.log("  User:", req.user?._id);
+
     const createdBy = req.user._id;
 
+    // ✅ Destructure and trim all fields
     const {
       title,
       description,
@@ -69,11 +73,29 @@ export const createEvent = async (req, res) => {
       capacity,
     } = req.body;
 
-    // Validate required fields
-    if (!title?.trim() || !description?.trim() || !date || !venue?.trim()) {
-      return res
-        .status(400)
-        .json({ message: "Title, description, date, and venue are required." });
+    // ✅ DEBUG: Log each field
+    console.log("📝 Extracted fields:");
+    console.log("  title:", title);
+    console.log("  description:", description);
+    console.log("  date:", date);
+    console.log("  venue:", venue);
+    console.log("  time:", time);
+    console.log("  typeOfEvent:", typeOfEvent);
+    console.log("  capacity:", capacity);
+    console.log("  reminders:", reminders);
+
+    // ✅ Validate required fields
+    if (!title || title.trim() === "") {
+      return res.status(400).json({ message: "Title is required." });
+    }
+    if (!description || description.trim() === "") {
+      return res.status(400).json({ message: "Description is required." });
+    }
+    if (!date) {
+      return res.status(400).json({ message: "Date is required." });
+    }
+    if (!venue || venue.trim() === "") {
+      return res.status(400).json({ message: "Venue is required." });
     }
 
     // Validate date format (YYYY-MM-DD)
@@ -81,7 +103,7 @@ export const createEvent = async (req, res) => {
       return res.status(400).json({ message: "Date must be in YYYY-MM-DD format." });
     }
 
-    // Validate time format (HH:mm)
+    // Validate time format (HH:mm) if provided
     if (time && !/^([01]\d|2[0-3]):([0-5]\d)$/.test(time)) {
       return res.status(400).json({ message: "Time must be in HH:mm format." });
     }
@@ -96,19 +118,21 @@ export const createEvent = async (req, res) => {
     let parsedReminders = [];
     if (reminders) {
       try {
-        parsedReminders = JSON.parse(reminders);
-        if (!Array.isArray(parsedReminders))
+        parsedReminders = typeof reminders === 'string' ? JSON.parse(reminders) : reminders;
+        if (!Array.isArray(parsedReminders)) {
           throw new Error("Reminders must be an array.");
+        }
       } catch (err) {
+        console.error("❌ Reminders parsing error:", err);
         return res.status(400).json({ message: "Invalid reminders format." });
       }
     }
 
-    // Build event object
+    // ✅ Build event object
     const eventFields = {
       title: title.trim(),
       description: description.trim(),
-      date,
+      date: new Date(date), // Convert to Date object
       venue: venue.trim(),
       createdBy,
       status: "Pending",
@@ -116,12 +140,17 @@ export const createEvent = async (req, res) => {
       reminders: parsedReminders,
     };
 
+    // Add optional fields only if they exist
     if (time) eventFields.time = time;
     if (duration) eventFields.duration = duration;
-    if (typeOfEvent) eventFields.typeOfEvent = typeOfEvent.trim();
+    if (typeOfEvent && typeOfEvent.trim()) eventFields.typeOfEvent = typeOfEvent.trim();
     if (req.file) eventFields.image = req.file.path;
 
+    console.log("✅ Creating event with fields:", eventFields);
+
     const newEvent = await Event.create(eventFields);
+
+    console.log("✅ Event created successfully:", newEvent._id);
 
     res.status(201).json({
       message: "Event submitted for review. Pending admin approval.",
@@ -129,12 +158,22 @@ export const createEvent = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error creating event:", error);
+    
     if (error.name === "ValidationError") {
-      return res.status(400).json({ message: "Validation failed", details: error.errors });
+      const errors = Object.keys(error.errors).map(key => error.errors[key].message);
+      return res.status(400).json({ 
+        message: "Validation failed", 
+        details: errors.join(", ")
+      });
     }
-    res.status(500).json({ message: "Server error creating event", details: error.message });
+    
+    res.status(500).json({ 
+      message: "Server error creating event", 
+      details: error.message 
+    });
   }
 };
+
 // 🟩 APPROVE EVENT (Admin only)
 export const approveEvent = async (req, res) => {
   try {

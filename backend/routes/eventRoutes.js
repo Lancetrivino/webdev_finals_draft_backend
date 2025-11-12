@@ -3,19 +3,21 @@ import multer from "multer";
 import {
   createEvent,
   getEvents,
-  getEventById, 
+  getEventById,
   approveEvent,
   updateEvent,
   deleteEvent,
+  joinEvent,
+  leaveEvent,
 } from "../controllers/eventController.js";
 import { protect, admin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Multer setup
+// ✅ Multer setup with better error handling
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/"); 
+    cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -23,7 +25,6 @@ const storage = multer.diskStorage({
   },
 });
 
-// Optional: only accept image files
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image/")) {
     cb(null, true);
@@ -32,22 +33,25 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({ 
-  storage, 
-  fileFilter, 
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB max
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
 });
 
-// Routes
+// ✅ Routes
 router.route("/")
   .get(protect, getEvents)
-  .post(protect, upload.single("image"), createEvent); // <-- updated for file upload
+  .post(protect, upload.single("image"), createEvent);
 
 router.put("/:id/approve", protect, admin, approveEvent);
 
 router.route("/:id")
   .get(protect, getEventById)
-  .put(protect, updateEvent)
+  .put(protect, upload.single("image"), updateEvent) // ✅ Added multer here too
   .delete(protect, deleteEvent);
+
+router.post("/:id/join", protect, joinEvent);
+router.post("/:id/leave", protect, leaveEvent);
 
 export default router;
