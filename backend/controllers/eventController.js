@@ -48,19 +48,16 @@ export const getEventById = async (req, res) => {
   }
 };
 
-// 🟩 CREATE A NEW EVENT (✅ Fixed for .fields())
+// 🟩 CREATE A NEW EVENT (✅ Updated for Cloudinary)
 export const createEvent = async (req, res) => {
   try {
-    // ✅ DEBUG: Log everything received
     console.log("📥 CREATE EVENT REQUEST:");
-    console.log("  Headers:", req.headers);
     console.log("  Body:", req.body);
-    console.log("  Files:", req.files); // ✅ Changed from req.file
+    console.log("  Files:", req.files);
     console.log("  User:", req.user?._id);
 
     const createdBy = req.user._id;
 
-    // ✅ Destructure and trim all fields
     const {
       title,
       description,
@@ -72,17 +69,6 @@ export const createEvent = async (req, res) => {
       typeOfEvent,
       capacity,
     } = req.body;
-
-    // ✅ DEBUG: Log each field
-    console.log("📝 Extracted fields:");
-    console.log("  title:", title);
-    console.log("  description:", description);
-    console.log("  date:", date);
-    console.log("  venue:", venue);
-    console.log("  time:", time);
-    console.log("  typeOfEvent:", typeOfEvent);
-    console.log("  capacity:", capacity);
-    console.log("  reminders:", reminders);
 
     // ✅ Validate required fields
     if (!title || title.trim() === "") {
@@ -132,7 +118,7 @@ export const createEvent = async (req, res) => {
     const eventFields = {
       title: title.trim(),
       description: description.trim(),
-      date: new Date(date), // Convert to Date object
+      date: new Date(date),
       venue: venue.trim(),
       createdBy,
       status: "Pending",
@@ -144,8 +130,11 @@ export const createEvent = async (req, res) => {
     if (time) eventFields.time = time;
     if (duration) eventFields.duration = duration;
     if (typeOfEvent && typeOfEvent.trim()) eventFields.typeOfEvent = typeOfEvent.trim();
-    // ✅ Fixed: Changed from req.file to req.files
-    if (req.files?.image?.[0]) eventFields.image = req.files.image[0].path;
+    
+    // ✅ Cloudinary returns the full URL in req.files
+    if (req.files?.image?.[0]) {
+      eventFields.image = req.files.image[0].path; // Cloudinary URL
+    }
 
     console.log("✅ Creating event with fields:", eventFields);
 
@@ -195,7 +184,7 @@ export const approveEvent = async (req, res) => {
   }
 };
 
-// 🟩 UPDATE EVENT (✅ Fixed for .fields())
+// 🟩 UPDATE EVENT (✅ Updated for Cloudinary)
 export const updateEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
@@ -214,9 +203,9 @@ export const updateEvent = async (req, res) => {
       delete updateData.createdBy;
     }
 
-    // ✅ Fixed: Handle image upload with .fields()
+    // ✅ Handle Cloudinary image upload
     if (req.files?.image?.[0]) {
-      updateData.image = req.files.image[0].path;
+      updateData.image = req.files.image[0].path; // Cloudinary URL
     }
 
     const updatedEvent = await Event.findByIdAndUpdate(req.params.id, updateData, {
