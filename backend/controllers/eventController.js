@@ -6,13 +6,25 @@ export const getEvents = async (req, res) => {
     let events;
 
     if (req.user.role === "Admin") {
+      // Admin sees all events with creator info
       events = await Event.find().populate("createdBy", "name email role");
     } else {
+      // Regular users see only their own events
       events = await Event.find({ createdBy: req.user._id }).populate(
         "createdBy",
         "name email"
       );
     }
+
+    console.log("🔍 getEvents Debug:");
+    console.log("  User ID:", req.user._id.toString());
+    console.log("  User Role:", req.user.role);
+    console.log("  Total Events Found:", events.length);
+    console.log("  Event IDs:", events.map(e => ({
+      id: e._id,
+      title: e.title,
+      createdBy: e.createdBy?._id?.toString() || e.createdBy
+    })));
 
     res.status(200).json(events);
   } catch (error) {
@@ -52,6 +64,7 @@ export const getEventById = async (req, res) => {
       return res.status(403).json({ message: "Access denied. Event is not approved." });
     }
 
+    // ✅ Return consistent structure
     res.status(200).json({
       ...event.toObject(),
       totalParticipants: event.participants?.length || 0,
@@ -66,7 +79,7 @@ export const getEventById = async (req, res) => {
 // 🟩 CREATE A NEW EVENT (✅ Updated for Cloudinary)
 export const createEvent = async (req, res) => {
   try {
-    console.log("📥 CREATE EVENT REQUEST:");
+    console.log("🔥 CREATE EVENT REQUEST:");
     console.log("  Body:", req.body);
     console.log("  Files:", req.files);
     console.log("  User:", req.user?._id);
@@ -156,6 +169,7 @@ export const createEvent = async (req, res) => {
     const newEvent = await Event.create(eventFields);
 
     console.log("✅ Event created successfully:", newEvent._id);
+    console.log("✅ Event createdBy field:", newEvent.createdBy);
 
     res.status(201).json({
       message: "Event submitted for review. Pending admin approval.",
