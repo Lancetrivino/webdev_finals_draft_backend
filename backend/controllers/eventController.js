@@ -1,6 +1,6 @@
 import Event from "../models/Event.js";
 
-// 🟩 GET ALL EVENTS
+// 🟩 GET ALL EVENTS (for "My Events" page - shows user's own events or all for admin)
 export const getEvents = async (req, res) => {
   try {
     let events;
@@ -18,6 +18,21 @@ export const getEvents = async (req, res) => {
   } catch (error) {
     console.error("❌ Error getting events:", error);
     res.status(500).json({ message: "Server error fetching events" });
+  }
+};
+
+// 🟢 NEW: GET ALL APPROVED EVENTS (for "Available Events" page - shows all approved events to everyone)
+export const getAvailableEvents = async (req, res) => {
+  try {
+    // Everyone can see approved events
+    const events = await Event.find({ status: "Approved" })
+      .populate("createdBy", "name email")
+      .sort({ date: 1 }); // Sort by date ascending
+
+    res.status(200).json(events);
+  } catch (error) {
+    console.error("❌ Error getting available events:", error);
+    res.status(500).json({ message: "Server error fetching available events" });
   }
 };
 
@@ -184,6 +199,26 @@ export const approveEvent = async (req, res) => {
   }
 };
 
+// 🟩 REJECT EVENT (Admin only)
+export const rejectEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    if (event.status === "Rejected") {
+      return res.status(200).json({ message: "Event already rejected.", event });
+    }
+
+    event.status = "Rejected";
+    await event.save();
+
+    res.status(200).json({ message: "Event rejected.", event });
+  } catch (error) {
+    console.error("❌ Error rejecting event:", error);
+    res.status(500).json({ message: "Server error during event rejection." });
+  }
+};
+
 // 🟩 UPDATE EVENT (✅ Updated for Cloudinary)
 export const updateEvent = async (req, res) => {
   try {
@@ -254,6 +289,10 @@ export const joinEvent = async (req, res) => {
     const userId = req.user._id;
     if (event.participants.includes(userId)) {
       return res.status(400).json({ message: "User already registered for this event." });
+    }
+
+    if (event.participants.length >= event.capacity) {
+      return res.status(400).json({ message: "Event is full." });
     }
 
     event.participants.push(userId);
