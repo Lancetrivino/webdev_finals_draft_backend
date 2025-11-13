@@ -9,11 +9,12 @@ import {
   deleteEvent,
   joinEvent,
   leaveEvent,
+  getAvailableEvents,
 } from "../controllers/eventController.js";
 import { protect, admin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
-
+router.get("/available", getAvailableEvents);
 // ✅ Routes - Using Cloudinary upload
 router.route("/")
   .get(protect, getEvents)
