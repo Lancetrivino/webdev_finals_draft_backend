@@ -5,6 +5,7 @@ import {
   getEvents,
   getEventById,
   approveEvent,
+  rejectEvent, // ✅ Import rejectEvent
   updateEvent,
   deleteEvent,
   joinEvent,
@@ -16,25 +17,24 @@ import { protect, admin } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 // ✅ IMPORTANT: Specific routes MUST come before parameterized routes
-// Put /available BEFORE /:id to avoid route conflicts
+// 1. Most specific routes first
 router.get("/available", getAvailableEvents);
 
-// Main routes
+// 2. Root routes
 router.route("/")
   .get(protect, getEvents)
   .post(protect, upload.fields([{ name: "image", maxCount: 1 }]), createEvent);
 
-// Admin approval route (also specific, comes before /:id)
+// 3. Specific action routes (BEFORE /:id)
 router.put("/:id/approve", protect, admin, approveEvent);
+router.put("/:id/reject", protect, admin, rejectEvent); // ✅ ADD THIS LINE
+router.post("/:id/join", protect, joinEvent);
+router.post("/:id/leave", protect, leaveEvent);
 
-// Parameterized routes (these should come LAST)
+// 4. Generic parameterized routes (ALWAYS LAST)
 router.route("/:id")
   .get(protect, getEventById)
   .put(protect, upload.fields([{ name: "image", maxCount: 1 }]), updateEvent)
   .delete(protect, deleteEvent);
-
-// Join/leave routes (also use :id but are specific actions)
-router.post("/:id/join", protect, joinEvent);
-router.post("/:id/leave", protect, leaveEvent);
 
 export default router;
