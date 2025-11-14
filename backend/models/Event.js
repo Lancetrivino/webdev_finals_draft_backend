@@ -34,7 +34,7 @@ const eventSchema = new mongoose.Schema(
       trim: true,
     },
     typeOfEvent: {
-      type: String, // ✅ ADDED: Type of event (e.g., "Conference", "Workshop")
+      type: String,
       trim: true,
     },
     image: {
@@ -66,11 +66,42 @@ const eventSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    // ✅ NEW: Feedback-related fields
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    totalReviews: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true, // adds createdAt & updatedAt
   }
 );
+
+// ✅ Virtual field to check if event has passed
+eventSchema.virtual("hasPassed").get(function () {
+  return new Date() > this.date;
+});
+
+// ✅ Virtual field to check if event is full
+eventSchema.virtual("isFull").get(function () {
+  return this.participants.length >= this.capacity;
+});
+
+// ✅ Virtual field for remaining slots
+eventSchema.virtual("remainingSlots").get(function () {
+  return Math.max(0, this.capacity - this.participants.length);
+});
+
+// ✅ Ensure virtuals are included when converting to JSON
+eventSchema.set("toJSON", { virtuals: true });
+eventSchema.set("toObject", { virtuals: true });
 
 const Event = mongoose.model("Event", eventSchema);
 export default Event;
