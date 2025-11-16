@@ -6,13 +6,13 @@ const feedbackSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Event",
       required: [true, "Event reference is required"],
-      index: true, // ✅ Index for faster queries
+      index: true,
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: [true, "User reference is required"],
-      index: true, // ✅ Index for faster queries
+      index: true,
     },
     rating: {
       type: Number,
@@ -24,11 +24,11 @@ const feedbackSchema = new mongoose.Schema(
       type: String,
       required: [true, "Comment is required"],
       trim: true,
-      maxlength: [300, "Comment cannot be more than 300 characters"],
+      maxlength: [500, "Comment cannot be more than 500 characters"],
     },
     type: {
       type: String,
-      enum: ["idea", "complaint", "suggestion"],
+      enum: ["idea", "issue", "praise", "other", "complaint", "suggestion"],
       default: "idea",
     },
     email: {
@@ -40,22 +40,69 @@ const feedbackSchema = new mongoose.Schema(
         "Please provide a valid email",
       ],
     },
+    // ✅ NEW: Photo uploads from Cloudinary
+    photos: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function(arr) {
+          return arr.length <= 5;
+        },
+        message: "You can upload maximum 5 photos"
+      }
+    },
+    // ✅ NEW: Helpful feature
+    helpfulCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    markedHelpfulBy: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "User",
+      default: [],
+    },
+    // ✅ NEW: Report system
+    reports: [
+      {
+        reportedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        reason: String,
+        reportedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    flagged: {
+      type: Boolean,
+      default: false,
+    },
+    // ✅ NEW: Verified attendee badge
+    verified: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
-    timestamps: true, // adds createdAt & updatedAt
+    timestamps: true,
   }
 );
 
-// ✅ Compound index to prevent duplicate feedback from same user for same event
+// ✅ Compound index to prevent duplicate feedback
 feedbackSchema.index({ event: 1, user: 1 }, { unique: true });
 
-// ✅ Index for sorting by creation date
+// ✅ Indexes for sorting
 feedbackSchema.index({ createdAt: -1 });
+feedbackSchema.index({ rating: -1 });
+feedbackSchema.index({ helpfulCount: -1 });
 
-// ✅ Pre-save hook to validate email format if provided
+// ✅ Pre-save hook
 feedbackSchema.pre("save", function (next) {
   if (this.email && this.email.trim() === "") {
-    this.email = undefined; // Remove empty email
+    this.email = undefined;
   }
   next();
 });
