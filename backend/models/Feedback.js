@@ -5,13 +5,20 @@ const feedbackSchema = new mongoose.Schema(
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Event",
-      required: [true, "Event reference is required"],
+      default: null, // ✅ Allow null for website feedback
       index: true,
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: [true, "User reference is required"],
+      index: true,
+    },
+    // ✅ NEW: Feedback type (event or website)
+    feedbackType: {
+      type: String,
+      enum: ["event", "website"],
+      default: "event",
       index: true,
     },
     rating: {
@@ -28,7 +35,17 @@ const feedbackSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["idea", "issue", "praise", "other", "complaint", "suggestion"],
+      enum: [
+        "idea", 
+        "issue", 
+        "praise", 
+        "other", 
+        "complaint", 
+        "suggestion",
+        "bug",      // ✅ For website feedback
+        "feature",  // ✅ For website feedback
+        "ui"        // ✅ For website feedback
+      ],
       default: "idea",
     },
     email: {
@@ -40,7 +57,7 @@ const feedbackSchema = new mongoose.Schema(
         "Please provide a valid email",
       ],
     },
-    // ✅ NEW: Photo uploads from Cloudinary
+    // Photo uploads from Cloudinary
     photos: {
       type: [String],
       default: [],
@@ -51,7 +68,7 @@ const feedbackSchema = new mongoose.Schema(
         message: "You can upload maximum 5 photos"
       }
     },
-    // ✅ NEW: Helpful feature
+    // Helpful feature
     helpfulCount: {
       type: Number,
       default: 0,
@@ -62,7 +79,7 @@ const feedbackSchema = new mongoose.Schema(
       ref: "User",
       default: [],
     },
-    // ✅ NEW: Report system
+    // Report system
     reports: [
       {
         reportedBy: {
@@ -80,7 +97,7 @@ const feedbackSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    // ✅ NEW: Verified attendee badge
+    // Verified attendee badge
     verified: {
       type: Boolean,
       default: false,
@@ -91,15 +108,15 @@ const feedbackSchema = new mongoose.Schema(
   }
 );
 
-// ✅ Compound index to prevent duplicate feedback
-feedbackSchema.index({ event: 1, user: 1 }, { unique: true });
+// ✅ Updated compound index to include feedbackType
+feedbackSchema.index({ event: 1, user: 1, feedbackType: 1 }, { unique: true });
 
-// ✅ Indexes for sorting
+// Indexes for sorting
 feedbackSchema.index({ createdAt: -1 });
 feedbackSchema.index({ rating: -1 });
 feedbackSchema.index({ helpfulCount: -1 });
 
-// ✅ Pre-save hook
+// Pre-save hook
 feedbackSchema.pre("save", function (next) {
   if (this.email && this.email.trim() === "") {
     this.email = undefined;

@@ -1,60 +1,80 @@
 import Feedback from "../models/Feedback.js";
 import Event from "../models/Event.js";
 import mongoose from "mongoose";
-import { deleteFromCloudinary, extractPublicId } from "../config/cloudinary.js"; // ✅ Import helpers
+import { deleteFromCloudinary, extractPublicId } from "../config/cloudinary.js";
 
-// ✅ Add feedback with photo uploads
+// ✅ Add feedback - NO RESTRICTIONS (can submit anytime)
 export const addFeedback = async (req, res) => {
   try {
     const { id: eventId } = req.params;
-    const { rating, comment, type, email } = req.body;
+    const { rating, comment, type, email, feedbackType } = req.body;
     const userId = req.user._id;
 
-    // 1. Check if event exists
+    console.log("📝 Adding feedback:", { eventId, userId, feedbackType, rating });
+
+    // WEBSITE FEEDBACK (No event required)
+    if (feedbackType === "website" || !eventId || eventId === "website") {
+      const photos = req.files ? req.files.map(file => file.path) : [];
+      
+      const feedback = new Feedback({
+        event: null,
+        user: userId,
+        feedbackType: "website",
+        rating: Number(rating),
+        comment: comment.trim(),
+        type: type || "idea",
+        email: email || undefined,
+        photos: photos,
+        verified: false,
+      });
+
+      await feedback.save();
+      await feedback.populate("user", "name email avatar");
+
+      console.log("✅ Website feedback created:", feedback._id);
+
+      return res.status(201).json({
+        message: "Thank you for your website feedback!",
+        feedback,
+      });
+    }
+
+    // EVENT FEEDBACK
+    // 1. Validate eventId
+    if (!mongoose.Types.ObjectId.isValid(eventId)) {
+      return res.status(400).json({ message: "Invalid event ID" });
+    }
+
+    // 2. Check if event exists
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    // 2. Check if user has joined
-    const hasJoined = event.participants.some(
-      (participant) => participant.toString() === userId.toString()
-    );
-    if (!hasJoined) {
-      return res.status(403).json({
-        message: "You must join this event before giving feedback",
-      });
-    }
-
-    // 3. Check if event has passed
-    const eventDate = new Date(event.date);
-    const now = new Date();
-    if (now <= eventDate) {
-      return res.status(400).json({
-        message: "You can only submit feedback after the event has ended",
-        eventDate: event.date,
-      });
-    }
-
-    // 4. Check for existing feedback
+    // 3. ❌ REMOVED: Join requirement check
+    // 4. ❌ REMOVED: Event date check
+    
+    // 5. Check for duplicate feedback (still prevent multiple submissions)
     const existingFeedback = await Feedback.findOne({
       event: eventId,
       user: userId,
+      feedbackType: "event"
     });
+    
     if (existingFeedback) {
       return res.status(400).json({
         message: "You have already submitted feedback for this event",
       });
     }
 
-    // 5. Validate rating
+    // 6. Validate rating
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({
         message: "Rating must be between 1 and 5",
       });
     }
 
-    // 6. Validate comment
+    // 7. Validate comment
     if (!comment || comment.trim().length === 0) {
       return res.status(400).json({
         message: "Feedback comment is required",
@@ -66,26 +86,27 @@ export const addFeedback = async (req, res) => {
       });
     }
 
-    // 7. ✅ Handle photo uploads from Cloudinary (URLs are in file.path)
+    // 8. Handle photo uploads from Cloudinary
     const photos = req.files ? req.files.map(file => file.path) : [];
-    console.log('Uploaded photos:', photos); // Debug log
+    console.log('📸 Uploaded photos:', photos);
 
-    // 8. Create feedback
+    // 9. Create feedback
     const feedback = new Feedback({
       event: eventId,
       user: userId,
+      feedbackType: "event",
       rating: Number(rating),
       comment: comment.trim(),
       type: type || "idea",
       email: email || undefined,
       photos: photos,
-      verified: true, // Mark as verified since they attended
+      verified: true,
     });
 
     await feedback.save();
 
-    // 9. Update event ratings
-    const allFeedbacks = await Feedback.find({ event: eventId });
+    // 10. Update event ratings
+    const allFeedbacks = await Feedback.find({ event: eventId, feedbackType: "event" });
     const totalRatings = allFeedbacks.reduce((sum, f) => sum + f.rating, 0);
     const avgRating = totalRatings / allFeedbacks.length;
 
@@ -93,11 +114,13 @@ export const addFeedback = async (req, res) => {
     event.totalReviews = allFeedbacks.length;
     await event.save();
 
-    // 10. Populate user info
+    // 11. Populate user info
     await feedback.populate("user", "name email avatar");
 
+    console.log("✅ Event feedback created:", feedback._id);
+
     res.status(201).json({
-      message: "Feedback submitted successfully",
+      message: "Feedback submitted successfully!",
       feedback,
       eventRating: {
         average: event.averageRating,
@@ -105,7 +128,7 @@ export const addFeedback = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error adding feedback:", error);
+    console.error("❌ Error adding feedback:", error);
 
     if (error.code === 11000) {
       return res.status(400).json({
@@ -132,6 +155,8 @@ export const getFeedbackByEvent = async (req, res) => {
       limit = 10 
     } = req.query;
 
+    console.log("📖 Fetching feedback for:", eventId);
+
     // Check if event exists
     const event = await Event.findById(eventId);
     if (!event) {
@@ -139,7 +164,7 @@ export const getFeedbackByEvent = async (req, res) => {
     }
 
     // Build query
-    let query = { event: eventId };
+    let query = { event: eventId, feedbackType: "event" };
 
     // Filter by rating
     if (filterRating && filterRating > 0) {
@@ -185,7 +210,7 @@ export const getFeedbackByEvent = async (req, res) => {
     const total = await Feedback.countDocuments(query);
 
     // Calculate rating summary
-    const allFeedbacks = await Feedback.find({ event: eventId });
+    const allFeedbacks = await Feedback.find({ event: eventId, feedbackType: "event" });
     const summary = {
       total: allFeedbacks.length,
       averageRating: event.averageRating || 0,
@@ -197,6 +222,8 @@ export const getFeedbackByEvent = async (req, res) => {
         1: allFeedbacks.filter((f) => f.rating === 1).length,
       },
     };
+
+    console.log(`✅ Found ${feedbacks.length} feedback items`);
 
     res.status(200).json({
       success: true,
@@ -210,9 +237,57 @@ export const getFeedbackByEvent = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching feedback:", error);
+    console.error("❌ Error fetching feedback:", error);
     res.status(500).json({
       message: "Failed to fetch feedback",
+      error: error.message,
+    });
+  }
+};
+
+// ✅ Get all website feedback (Admin)
+export const getWebsiteFeedback = async (req, res) => {
+  try {
+    const { 
+      sortBy = "recent", 
+      filterRating,
+      page = 1,
+      limit = 20 
+    } = req.query;
+
+    let query = { feedbackType: "website" };
+
+    if (filterRating && filterRating > 0) {
+      query.rating = parseInt(filterRating);
+    }
+
+    let sort = { createdAt: -1 };
+    if (sortBy === "highest") sort = { rating: -1, createdAt: -1 };
+    if (sortBy === "lowest") sort = { rating: 1, createdAt: -1 };
+
+    const skip = (page - 1) * limit;
+    const feedbacks = await Feedback.find(query)
+      .populate("user", "name email avatar")
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Feedback.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      feedbacks,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("❌ Error fetching website feedback:", error);
+    res.status(500).json({
+      message: "Failed to fetch website feedback",
       error: error.message,
     });
   }
@@ -259,7 +334,7 @@ export const updateFeedback = async (req, res) => {
     await feedback.save();
 
     // Recalculate event average rating
-    const allFeedbacks = await Feedback.find({ event: eventId });
+    const allFeedbacks = await Feedback.find({ event: eventId, feedbackType: "event" });
     const totalRatings = allFeedbacks.reduce((sum, f) => sum + f.rating, 0);
     const avgRating = totalRatings / allFeedbacks.length;
 
@@ -306,9 +381,9 @@ export const deleteFeedback = async (req, res) => {
       });
     }
 
-    // ✅ Delete photos from Cloudinary
+    // Delete photos from Cloudinary
     if (feedback.photos && feedback.photos.length > 0) {
-      console.log('Deleting photos from Cloudinary:', feedback.photos);
+      console.log('🗑️ Deleting photos from Cloudinary:', feedback.photos);
       
       for (const photoUrl of feedback.photos) {
         try {
@@ -319,7 +394,6 @@ export const deleteFeedback = async (req, res) => {
           }
         } catch (error) {
           console.error(`❌ Error deleting ${photoUrl}:`, error);
-          // Continue even if photo deletion fails
         }
       }
     }
@@ -327,7 +401,7 @@ export const deleteFeedback = async (req, res) => {
     await feedback.deleteOne();
 
     // Recalculate event ratings
-    const allFeedbacks = await Feedback.find({ event: eventId });
+    const allFeedbacks = await Feedback.find({ event: eventId, feedbackType: "event" });
     
     if (allFeedbacks.length > 0) {
       const totalRatings = allFeedbacks.reduce((sum, f) => sum + f.rating, 0);
@@ -467,7 +541,7 @@ export const reportFeedback = async (req, res) => {
   }
 };
 
-// ✅ Check eligibility
+// ✅ Check eligibility - NO RESTRICTIONS
 export const canSubmitFeedback = async (req, res) => {
   try {
     const { id: eventId } = req.params;
@@ -478,25 +552,19 @@ export const canSubmitFeedback = async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    const hasJoined = event.participants.some(
-      (p) => p.toString() === userId.toString()
-    );
-
-    const eventDate = new Date(event.date);
-    const now = new Date();
-    const eventHasPassed = now > eventDate;
-
     const existingFeedback = await Feedback.findOne({
       event: eventId,
       user: userId,
+      feedbackType: "event"
     });
 
+    // ✅ Always allow submission unless already submitted
     res.status(200).json({
-      canSubmit: hasJoined && eventHasPassed && !existingFeedback,
-      hasJoined,
-      eventHasPassed,
+      canSubmit: !existingFeedback,
       alreadySubmitted: !!existingFeedback,
-      eventDate: event.date,
+      message: existingFeedback 
+        ? "You have already submitted feedback for this event" 
+        : "You can submit feedback anytime!",
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
