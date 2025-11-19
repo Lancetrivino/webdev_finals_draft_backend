@@ -33,6 +33,11 @@ export const getUserById = async (req, res) => {
 // ============================
 export const updateProfile = async (req, res) => {
   try {
+    console.log("📥 Update profile request received");
+    console.log("  User ID:", req.user._id);
+    console.log("  Body:", req.body);
+    console.log("  File:", req.file);
+
     const userId = req.user._id;
     const { name, address } = req.body;
 
@@ -47,12 +52,15 @@ export const updateProfile = async (req, res) => {
 
     // Handle avatar upload
     if (req.file) {
+      console.log("📸 New avatar uploaded:", req.file.path);
+      
       // Delete old avatar from Cloudinary if exists
       if (user.avatar) {
         const publicId = extractPublicId(user.avatar);
         if (publicId) {
           try {
             await deleteFromCloudinary(publicId);
+            console.log("🗑️ Old avatar deleted");
           } catch (error) {
             console.error("Error deleting old avatar:", error);
           }
@@ -64,6 +72,7 @@ export const updateProfile = async (req, res) => {
     }
 
     await user.save();
+    console.log("✅ Profile updated successfully");
 
     // Return user without password
     const updatedUser = await User.findById(userId).select("-password");
@@ -74,7 +83,10 @@ export const updateProfile = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Error updating profile:", err);
-    res.status(500).json({ message: "Server error updating profile" });
+    res.status(500).json({ 
+      message: "Server error updating profile",
+      error: err.message 
+    });
   }
 };
 

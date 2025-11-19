@@ -23,17 +23,15 @@ const userSchema = new mongoose.Schema(
       enum: ["Admin", "User"], 
       default: "User" 
     },
-    // ✅ NEW: Avatar field for profile picture
+    // ✅ ADD THESE THREE FIELDS:
     avatar: {
       type: String,
       default: null
     },
-    // ✅ NEW: Address field
     address: {
       type: String,
       default: ""
     },
-    // ✅ NEW: Active status for admin management
     active: {
       type: Boolean,
       default: true

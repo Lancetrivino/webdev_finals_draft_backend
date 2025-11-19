@@ -6,17 +6,13 @@ import {
   deleteUser,
   updateUserRole,
   toggleUserActive,
-  updateProfile, // ✅ ADD THIS
+  updateProfile, // ✅ IMPORT THIS
 } from "../controllers/userController.js";
 import { protect, admin } from "../middleware/authMiddleware.js";
-import { uploadAvatar } from "../config/cloudinary.js"; // ✅ ADD THIS
+import { uploadAvatar } from "../config/cloudinary.js"; // ✅ IMPORT THIS
 
 const router = express.Router();
 
-// ============================
-// ✅ NEW: Update current user's profile (authenticated users)
-// This must come BEFORE admin routes
-// ============================
 router.put(
   "/profile", 
   protect, 
@@ -24,9 +20,7 @@ router.put(
   updateProfile
 );
 
-// ============================
-// Admin routes below
-// ============================
+// Admin routes (everything below requires admin access)
 router.use(protect); // check JWT
 router.use(admin);   // check role === Admin
 
