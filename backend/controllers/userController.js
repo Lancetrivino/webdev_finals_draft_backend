@@ -1,11 +1,12 @@
 import User from "../models/User.js";
+import { deleteFromCloudinary, extractPublicId } from "../config/cloudinary.js";
 
 // ============================
 // ✅ Get all users (Admin only)
 // ============================
 export const getUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password"); // exclude password
+    const users = await User.find().select("-password");
     res.json(users);
   } catch (err) {
     console.error("❌ Error fetching users:", err);
@@ -28,8 +29,57 @@ export const getUserById = async (req, res) => {
 };
 
 // ============================
+// ✅ NEW: Update current user's profile
+// ============================
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { name, address } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update fields
+    if (name) user.name = name.trim();
+    if (address !== undefined) user.address = address.trim();
+
+    // Handle avatar upload
+    if (req.file) {
+      // Delete old avatar from Cloudinary if exists
+      if (user.avatar) {
+        const publicId = extractPublicId(user.avatar);
+        if (publicId) {
+          try {
+            await deleteFromCloudinary(publicId);
+          } catch (error) {
+            console.error("Error deleting old avatar:", error);
+          }
+        }
+      }
+      
+      // Set new avatar
+      user.avatar = req.file.path; // Cloudinary URL
+    }
+
+    await user.save();
+
+    // Return user without password
+    const updatedUser = await User.findById(userId).select("-password");
+
+    res.json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error("❌ Error updating profile:", err);
+    res.status(500).json({ message: "Server error updating profile" });
+  }
+};
+
+// ============================
 // ✅ Update user details (Admin only)
-// Can update name, email, or role
 // ============================
 export const updateUser = async (req, res) => {
   try {
@@ -60,7 +110,7 @@ export const deleteUser = async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    await user.remove();
+    await User.deleteOne({ _id: req.params.id });
     res.json({ message: "🗑️ User deleted successfully" });
   } catch (err) {
     console.error("❌ Error deleting user:", err);
@@ -73,15 +123,16 @@ export const deleteUser = async (req, res) => {
 // ============================
 export const toggleUserActive = async (req, res) => {
   try {
+    const { active } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    user.isActive = !user.isActive;
+    user.active = active;
     await user.save();
 
     res.json({
-      message: `✅ User is now ${user.isActive ? "active" : "inactive"}`,
-      user
+      message: `✅ User is now ${user.active ? "active" : "inactive"}`,
+      user: await User.findById(req.params.id).select("-password")
     });
   } catch (err) {
     console.error("❌ Error toggling user status:", err);

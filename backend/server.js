@@ -5,7 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
-import userRoutes from "./routes/userRoutes.js";
+import userRoutes from "./routes/userRoutes.js";  // ✅ ADD THIS
 import eventRoutes from "./routes/eventRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
 
@@ -40,8 +40,9 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Routes
-app.use("/api/users", authRoutes);
+// ✅ FIXED ROUTES
+app.use("/api/auth", authRoutes);           // ✅ Changed from /api/users
+app.use("/api/users", userRoutes);          // ✅ Added for admin user management
 app.use("/api/events", eventRoutes);
 app.use("/api/feedback", feedbackRoutes);
 

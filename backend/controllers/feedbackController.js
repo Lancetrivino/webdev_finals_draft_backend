@@ -562,6 +562,8 @@ export const canSubmitFeedback = async (req, res) => {
     res.status(200).json({
       canSubmit: !existingFeedback,
       alreadySubmitted: !!existingFeedback,
+      hasJoined: event.participants.includes(userId), // Add this for debugging
+      eventHasPassed: new Date() > new Date(event.date), // Add this for debugging
       message: existingFeedback 
         ? "You have already submitted feedback for this event" 
         : "You can submit feedback anytime!",
