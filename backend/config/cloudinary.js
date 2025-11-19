@@ -2,14 +2,12 @@ import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
 
-// Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ✅ Storage for EVENT images
 const eventStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
@@ -22,7 +20,7 @@ const eventStorage = new CloudinaryStorage({
   },
 });
 
-// ✅ NEW: Storage for FEEDBACK photos (multiple photos per review)
+
 const feedbackStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
@@ -39,7 +37,7 @@ const feedbackStorage = new CloudinaryStorage({
   },
 });
 
-// ✅ Storage for user avatars
+
 const avatarStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
@@ -56,7 +54,7 @@ const avatarStorage = new CloudinaryStorage({
   },
 });
 
-// File filter for images
+
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -65,24 +63,23 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// ✅ Event image upload (single image)
 export const upload = multer({
   storage: eventStorage,
   fileFilter,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
 });
 
-// ✅ NEW: Feedback photos upload (multiple images - up to 5)
+
 export const uploadFeedbackPhotos = multer({
   storage: feedbackStorage,
   fileFilter,
   limits: { 
-    fileSize: 10 * 1024 * 1024, // 10MB per file
+    fileSize: 10 * 1024 * 1024, 
     files: 5 // Maximum 5 photos per review
   },
 });
 
-// ✅ Avatar upload (single image)
+
 export const uploadAvatar = multer({
   storage: avatarStorage,
   fileFilter,

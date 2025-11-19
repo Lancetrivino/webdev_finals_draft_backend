@@ -6,10 +6,10 @@ import {
   deleteUser,
   updateUserRole,
   toggleUserActive,
-  updateProfile, // ✅ IMPORT THIS
+  updateProfile, 
 } from "../controllers/userController.js";
 import { protect, admin } from "../middleware/authMiddleware.js";
-import { uploadAvatar } from "../config/cloudinary.js"; // ✅ IMPORT THIS
+import { uploadAvatar } from "../config/cloudinary.js"; 
 
 const router = express.Router();
 

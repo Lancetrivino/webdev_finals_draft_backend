@@ -14,14 +14,12 @@ import {
 
 const router = express.Router();
 
-// ============================================
-// ROUTES
-// ============================================
 
-// ✅ Website feedback route (no eventId needed)
+
+//  Website feedback route (no eventId needed)
 router.post("/website", protect, uploadFeedbackPhotos.array("photos", 5), addFeedback);
 
-// ✅ Get all website feedback (Admin)
+//  Get all website feedback (Admin)
 router.get("/website", protect, getWebsiteFeedback);
 
 // Check if user can submit feedback for event
@@ -30,7 +28,7 @@ router.get("/:id/can-submit", protect, canSubmitFeedback);
 // Get all feedback for an event (with filters & pagination)
 router.get("/:id", protect, getFeedbackByEvent);
 
-// ✅ Add event feedback with photo uploads (up to 5 photos)
+// Add event feedback with photo uploads (up to 5 photos)
 router.post("/:id", protect, uploadFeedbackPhotos.array("photos", 5), addFeedback);
 
 // Update feedback (edit)

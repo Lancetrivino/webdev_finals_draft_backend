@@ -1,9 +1,7 @@
 import User from "../models/User.js";
 import { deleteFromCloudinary, extractPublicId } from "../config/cloudinary.js";
 
-// ============================
-// ✅ Get all users (Admin only)
-// ============================
+
 export const getUsers = async (req, res) => {
   try {
     const users = await User.find().select("-password");
@@ -14,9 +12,7 @@ export const getUsers = async (req, res) => {
   }
 };
 
-// ============================
-// ✅ Get single user by ID
-// ============================
+
 export const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
@@ -28,9 +24,7 @@ export const getUserById = async (req, res) => {
   }
 };
 
-// ============================
-// ✅ NEW: Update current user's profile
-// ============================
+
 export const updateProfile = async (req, res) => {
   try {
     console.log("📥 Update profile request received");
@@ -90,9 +84,7 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-// ============================
-// ✅ Update user details (Admin only)
-// ============================
+
 export const updateUser = async (req, res) => {
   try {
     const { name, email, role } = req.body;
@@ -114,9 +106,7 @@ export const updateUser = async (req, res) => {
   }
 };
 
-// ============================
-// ✅ Delete user (Admin only)
-// ============================
+
 export const deleteUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -130,9 +120,7 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-// ============================
-// ✅ Toggle Active/Inactive User
-// ============================
+
 export const toggleUserActive = async (req, res) => {
   try {
     const { active } = req.body;
@@ -152,9 +140,7 @@ export const toggleUserActive = async (req, res) => {
   }
 };
 
-// ============================
-// ✅ Change user role (Admin only)
-// ============================
+
 export const updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;

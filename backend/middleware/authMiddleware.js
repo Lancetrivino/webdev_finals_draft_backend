@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-// ✅ Protect routes: require a valid JWT token
+
 export const protect = async (req, res, next) => {
   if (!req.headers.authorization || !req.headers.authorization.startsWith("Bearer")) {
     return res.status(401).json({ message: "Not authorized, no token" });
@@ -23,7 +23,7 @@ export const protect = async (req, res, next) => {
   }
 };
 
-// ✅ Middleware for Admin-only routes
+
 export const admin = (req, res, next) => {
   if (req.user && req.user.role === "Admin") {
     return next();
@@ -31,7 +31,7 @@ export const admin = (req, res, next) => {
   return res.status(403).json({ message: "Admin access only" });
 };
 
-// ✅ Flexible role-based authorization
+
 export const authorizeRoles = (...roles) => (req, res, next) => {
   if (req.user && roles.includes(req.user.role)) {
     return next();

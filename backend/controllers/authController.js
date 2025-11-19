@@ -29,7 +29,7 @@ export const registerUser = async (req, res) => {
       token,
       user: {
         _id: user._id,
-        id: user._id, // ✅ Add both _id and id for compatibility
+        id: user._id, 
         name: user.name,
         email: user.email,
         role: user.role,
@@ -78,7 +78,7 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // ✅ CRITICAL: Generate token
+   
     const token = generateToken(user._id, user.role);
     
     console.log("✅ Login successful:", email);
@@ -86,13 +86,13 @@ export const loginUser = async (req, res) => {
     console.log("  Role:", user.role);
     console.log("  Token generated:", token.substring(0, 20) + "...");
 
-    // ✅ CRITICAL: Return both token and user data
+    
     res.json({
       message: 'Login successful',
       token, // ✅ Must return token
       user: { 
         _id: user._id,
-        id: user._id, // ✅ Add both _id and id for compatibility
+        id: user._id, 
         name: user.name, 
         email: user.email,
         role: user.role,

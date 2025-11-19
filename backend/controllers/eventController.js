@@ -1,6 +1,5 @@
 import Event from "../models/Event.js";
 
-// 🟩 GET ALL EVENTS (for "My Events" page - shows user's own events or all for admin)
 export const getEvents = async (req, res) => {
   try {
     let events;
@@ -33,7 +32,7 @@ export const getEvents = async (req, res) => {
   }
 };
 
-// 🟢 NEW: GET ALL APPROVED EVENTS (for "Available Events" page - shows all approved events to everyone)
+
 export const getAvailableEvents = async (req, res) => {
   try {
     // Everyone can see approved events
@@ -48,7 +47,7 @@ export const getAvailableEvents = async (req, res) => {
   }
 };
 
-// 🟩 GET SINGLE EVENT BY ID
+
 export const getEventById = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id)
@@ -76,7 +75,7 @@ export const getEventById = async (req, res) => {
   }
 };
 
-// 🟩 CREATE A NEW EVENT (✅ Updated for Cloudinary)
+
 export const createEvent = async (req, res) => {
   try {
     console.log("🔥 CREATE EVENT REQUEST:");
@@ -159,7 +158,7 @@ export const createEvent = async (req, res) => {
     if (duration) eventFields.duration = duration;
     if (typeOfEvent && typeOfEvent.trim()) eventFields.typeOfEvent = typeOfEvent.trim();
     
-    // ✅ Cloudinary returns the full URL in req.files
+    
     if (req.files?.image?.[0]) {
       eventFields.image = req.files.image[0].path; // Cloudinary URL
     }
@@ -193,7 +192,7 @@ export const createEvent = async (req, res) => {
   }
 };
 
-// 🟩 APPROVE EVENT (Admin only)
+
 export const approveEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
@@ -213,7 +212,7 @@ export const approveEvent = async (req, res) => {
   }
 };
 
-// 🟩 REJECT EVENT (Admin only)
+
 export const rejectEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
@@ -233,7 +232,7 @@ export const rejectEvent = async (req, res) => {
   }
 };
 
-// 🟩 UPDATE EVENT (✅ Updated for Cloudinary)
+
 export const updateEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
@@ -252,7 +251,7 @@ export const updateEvent = async (req, res) => {
       delete updateData.createdBy;
     }
 
-    // ✅ Handle Cloudinary image upload
+    
     if (req.files?.image?.[0]) {
       updateData.image = req.files.image[0].path; // Cloudinary URL
     }
@@ -269,7 +268,7 @@ export const updateEvent = async (req, res) => {
   }
 };
 
-// 🟩 DELETE EVENT
+
 export const deleteEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
@@ -290,7 +289,7 @@ export const deleteEvent = async (req, res) => {
   }
 };
 
-// 🟩 JOIN EVENT
+
 export const joinEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
@@ -319,7 +318,6 @@ export const joinEvent = async (req, res) => {
   }
 };
 
-// 🟩 LEAVE EVENT
 export const leaveEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);

@@ -3,7 +3,7 @@ import Event from "../models/Event.js";
 import mongoose from "mongoose";
 import { deleteFromCloudinary, extractPublicId } from "../config/cloudinary.js";
 
-// ✅ Add feedback - NO RESTRICTIONS (can submit anytime)
+
 export const addFeedback = async (req, res) => {
   try {
     const { id: eventId } = req.params;
@@ -39,22 +39,19 @@ export const addFeedback = async (req, res) => {
       });
     }
 
-    // EVENT FEEDBACK
-    // 1. Validate eventId
+   
     if (!mongoose.Types.ObjectId.isValid(eventId)) {
       return res.status(400).json({ message: "Invalid event ID" });
     }
 
-    // 2. Check if event exists
+ 
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    // 3. ❌ REMOVED: Join requirement check
-    // 4. ❌ REMOVED: Event date check
+  
     
-    // 5. Check for duplicate feedback (still prevent multiple submissions)
     const existingFeedback = await Feedback.findOne({
       event: eventId,
       user: userId,
@@ -67,14 +64,14 @@ export const addFeedback = async (req, res) => {
       });
     }
 
-    // 6. Validate rating
+  
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({
         message: "Rating must be between 1 and 5",
       });
     }
 
-    // 7. Validate comment
+
     if (!comment || comment.trim().length === 0) {
       return res.status(400).json({
         message: "Feedback comment is required",
@@ -86,11 +83,10 @@ export const addFeedback = async (req, res) => {
       });
     }
 
-    // 8. Handle photo uploads from Cloudinary
+
     const photos = req.files ? req.files.map(file => file.path) : [];
     console.log('📸 Uploaded photos:', photos);
 
-    // 9. Create feedback
     const feedback = new Feedback({
       event: eventId,
       user: userId,
@@ -105,7 +101,7 @@ export const addFeedback = async (req, res) => {
 
     await feedback.save();
 
-    // 10. Update event ratings
+
     const allFeedbacks = await Feedback.find({ event: eventId, feedbackType: "event" });
     const totalRatings = allFeedbacks.reduce((sum, f) => sum + f.rating, 0);
     const avgRating = totalRatings / allFeedbacks.length;
@@ -114,7 +110,7 @@ export const addFeedback = async (req, res) => {
     event.totalReviews = allFeedbacks.length;
     await event.save();
 
-    // 11. Populate user info
+
     await feedback.populate("user", "name email avatar");
 
     console.log("✅ Event feedback created:", feedback._id);
@@ -143,7 +139,6 @@ export const addFeedback = async (req, res) => {
   }
 };
 
-// ✅ Get feedback with filtering and sorting
 export const getFeedbackByEvent = async (req, res) => {
   try {
     const { id: eventId } = req.params;
@@ -157,26 +152,23 @@ export const getFeedbackByEvent = async (req, res) => {
 
     console.log("📖 Fetching feedback for:", eventId);
 
-    // Check if event exists
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    // Build query
+
     let query = { event: eventId, feedbackType: "event" };
 
-    // Filter by rating
+ 
     if (filterRating && filterRating > 0) {
       query.rating = parseInt(filterRating);
     }
 
-    // Search in comments
     if (search) {
       query.comment = { $regex: search, $options: "i" };
     }
 
-    // Build sort
     let sort = {};
     switch (sortBy) {
       case "recent":
@@ -198,7 +190,7 @@ export const getFeedbackByEvent = async (req, res) => {
         sort = { createdAt: -1 };
     }
 
-    // Execute query with pagination
+   
     const skip = (page - 1) * limit;
     const feedbacks = await Feedback.find(query)
       .populate("user", "name email avatar")
@@ -206,10 +198,10 @@ export const getFeedbackByEvent = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Get total count for pagination
+  
     const total = await Feedback.countDocuments(query);
 
-    // Calculate rating summary
+    
     const allFeedbacks = await Feedback.find({ event: eventId, feedbackType: "event" });
     const summary = {
       total: allFeedbacks.length,
@@ -245,7 +237,7 @@ export const getFeedbackByEvent = async (req, res) => {
   }
 };
 
-// ✅ Get all website feedback (Admin)
+
 export const getWebsiteFeedback = async (req, res) => {
   try {
     const { 
@@ -293,7 +285,7 @@ export const getWebsiteFeedback = async (req, res) => {
   }
 };
 
-// ✅ Edit feedback
+
 export const updateFeedback = async (req, res) => {
   try {
     const { id: eventId, reviewId } = req.params;
@@ -333,7 +325,7 @@ export const updateFeedback = async (req, res) => {
 
     await feedback.save();
 
-    // Recalculate event average rating
+
     const allFeedbacks = await Feedback.find({ event: eventId, feedbackType: "event" });
     const totalRatings = allFeedbacks.reduce((sum, f) => sum + f.rating, 0);
     const avgRating = totalRatings / allFeedbacks.length;
@@ -357,7 +349,7 @@ export const updateFeedback = async (req, res) => {
   }
 };
 
-// ✅ Delete feedback (with Cloudinary cleanup)
+
 export const deleteFeedback = async (req, res) => {
   try {
     const { id: eventId, reviewId } = req.params;
@@ -430,7 +422,7 @@ export const deleteFeedback = async (req, res) => {
   }
 };
 
-// ✅ Mark feedback as helpful
+
 export const markHelpful = async (req, res) => {
   try {
     const { id: eventId, reviewId } = req.params;
@@ -482,7 +474,7 @@ export const markHelpful = async (req, res) => {
   }
 };
 
-// ✅ Report feedback
+
 export const reportFeedback = async (req, res) => {
   try {
     const { id: eventId, reviewId } = req.params;
@@ -541,7 +533,7 @@ export const reportFeedback = async (req, res) => {
   }
 };
 
-// ✅ Check eligibility - NO RESTRICTIONS
+
 export const canSubmitFeedback = async (req, res) => {
   try {
     const { id: eventId } = req.params;
@@ -558,7 +550,7 @@ export const canSubmitFeedback = async (req, res) => {
       feedbackType: "event"
     });
 
-    // ✅ Always allow submission unless already submitted
+   
     res.status(200).json({
       canSubmit: !existingFeedback,
       alreadySubmitted: !!existingFeedback,
